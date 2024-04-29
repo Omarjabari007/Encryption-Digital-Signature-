@@ -7,6 +7,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 #include "aes.h"
 #include "filters.h"
 #include "base64.h"
@@ -27,20 +28,18 @@ vector<unsigned char> encryptData(const vector<unsigned char>& data, size_t& enc
 vector<unsigned char> decryptData(const vector<unsigned char>& encryptedData);
 double calculateNPCR(const Mat& encryptedImage1, const Mat& encryptedImage2);
 double calculateUACI(const Mat& encryptedImage1, const Mat& encryptedImage2);
-double calculateHD(const Mat& encryptedImage1, const Mat& encryptedImage2); // Function prototype
-double calculateChiSquared(const Mat& encryptedImage1, const Mat& encryptedImage2); // Function prototype
-double calculateHistogramChiSquared(const Mat& encryptedImage); // Function prototype
-double calculateInformationEntropy(const Mat& encryptedImage); // Function prototype
-double calculateEncryptionQuality(const Mat& plainImage, const Mat& encryptedImage); // Function prototype
+double calculateHD(const Mat& encryptedImage1, const Mat& encryptedImage2);
+double calculateChiSquared(const Mat& encryptedImage1, const Mat& encryptedImage2);
+double calculateHistogramChiSquared(const Mat& encryptedImage);
+double calculateInformationEntropy(const Mat& encryptedImage);
+double calculateEncryptionQuality(const Mat& plainImage, const Mat& encryptedImage);
 
-void visualizeHistogram(const Mat& encryptedImage); // Function prototype
-
+void visualizeHistogram(const Mat& encryptedImage);
+void hideConfidentialInformation(Mat& stegoImage, const string& name, int number);
+void displayImageComparison(const Mat& image1, const Mat& image2, const string& title);
 void performEncryption(const Mat& image);
 void performDecryption();
-
-
 int main() {
-    // Generate key and IV
     cout << "Our Tasks ! " << "\n";
     cout << "Choice1:" << " " << "Encryption Images" << "\n";
     cout << "Choice2:" << " " << "Calculate NPCR TEST !" << "\n";
@@ -51,9 +50,10 @@ int main() {
     cout << "Choice7:" << " " << "Information Entropy:!" << "\n";
     cout << "Choice8:" << " " << "Encryption Quality:" << "\n";
     cout << "Choice9:" << " " << "Encryption Time:" << "\n";
-    cout << "Choice10:" << " " << "Exit :" << "\n";
-
+    cout << "Choice10:" << " " << "SteaganoGraphy image :" << "\n";
+    cout << "Choice11:" << " " << "Exit :" << "\n";
     cout << "Initializing Encryption and Steganography System" << endl;
+    // Generate key and IV
 
     AutoSeededRandomPool prng;
     prng.GenerateBlock(key, key.size());
@@ -68,17 +68,12 @@ int main() {
 
     // Clone the original image for manipulation
     Mat image2 = image.clone();
-
     // Change one bit in image2
     image2.at<Vec3b>(0, 0)[0] ^= 0x01; // Change the first bit of the blue channel in the first pixel
 
-    // Convert images to vectors of bytes
     vector<unsigned char> imageData1 = matToVector(image);
     vector<unsigned char> imageData2 = matToVector(image2);
-
-    // Encrypt both images using the same key and IV
     auto start = chrono::high_resolution_clock::now();
-
     size_t encryptedSize1, encryptedSize2;
     vector<unsigned char> encryptedData1 = encryptData(imageData1, encryptedSize1);
     vector<unsigned char> encryptedData2 = encryptData(imageData2, encryptedSize2);
@@ -86,31 +81,44 @@ int main() {
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
 
-
-
     // Convert encrypted data to Mat for visualization (optional)
     Mat encryptedImage1 = vectorToMat(encryptedData1, image.size(), image.type());
     Mat encryptedImage2 = vectorToMat(encryptedData2, image2.size(), image2.type());
 
+    // Declare stegoImage before using it
+    Mat stegoImage = image.clone();
+
+    // Hide confidential information
+    string name = "omar_jabari";
+    int number = 211144; 
+    hideConfidentialInformation(stegoImage, name, number);
+
+    // Save the stego image
+    imwrite("Stegoimage.bmp", stegoImage); // Save as BMP
+    cout << "Stegoimage.bmp saved successfully!" << endl;
+
     // Display encrypted images (optional)
-    bool flag = true; 
-    
+    bool flag = true;
+
     while (flag) {
-        int choice; 
+        int choice;
+        cout << "Enter your choice (1-11): ";
         cin >> choice;
+
         if (choice == 1) {
+            // Display encrypted image
             imshow("Encrypted image 1", encryptedImage1);
             imshow("Encrypted image 2", encryptedImage2);
             imwrite("Encrypted_image1.bmp", encryptedImage1); // Save as BMP
             imwrite("Encrypted_image2.bmp", encryptedImage2); // Save as BMP
             waitKey(0);
 
+            
         }
         else if (choice == 2) {
             // Calculate NPCR
             double npcRate = calculateNPCR(encryptedImage1, encryptedImage2);
             cout << "NPCR (Number of Pixel Change Rate): " << fixed << setprecision(2) << npcRate << "%" << endl;
-
         }
         else if (choice == 3) {
             // Calculate UACI
@@ -122,13 +130,11 @@ int main() {
             // Calculate HD
             double hd = calculateHD(encryptedImage1, encryptedImage2);
             cout << "HD (Hamming Distance): " << fixed << setprecision(2) << hd << "%" << endl;
-
         }
         else if (choice == 5) {
             // Calculate Chi-squared Statistic
             double chiSquared = calculateChiSquared(encryptedImage1, encryptedImage2);
             cout << "Chi-squared Statistic: " << chiSquared << endl;
-
         }
         else if (choice == 6) {
             // Perform Histogram Analysis
@@ -148,7 +154,6 @@ int main() {
             // Visualize Histogram
             visualizeHistogram(encryptedImage1);
 
-
         }
         else if (choice == 7) {
             // Calculate Information Entropy
@@ -157,20 +162,28 @@ int main() {
 
         }
         else if (choice == 8) {
+            // Calculate Encryption Quality
             double encryptionQuality = calculateEncryptionQuality(image, encryptedImage1);
             cout << "Encryption Quality: " << fixed << setprecision(2) << encryptionQuality << endl;
-
         }
         else if (choice == 9) {
+            // Encryption Time
             double encryptionTimeInSeconds = duration.count();
             cout << "Encryption Time: " << fixed << setprecision(5) << encryptionTimeInSeconds << " seconds" << endl;
-
+        }
+        else if (choice == 10) {
+            imshow("StegoImage", stegoImage);
+            waitKey(0);
+        }
+        else if (choice == 11) {
+            // Exit
+            flag = false;
         }
         else {
-            break; 
+            cout << "Invalid choice. Please enter a number from 1 to 11." << endl;
         }
-        
     }
+
     return 0;
 }
 
@@ -231,7 +244,6 @@ vector<unsigned char> decryptData(const vector<unsigned char>& encryptedData) {
 
     return vector<unsigned char>(decryptedText.begin(), decryptedText.end());
 }
-
 double calculateNPCR(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     int totalPixels = encryptedImage1.rows * encryptedImage1.cols * encryptedImage1.channels();
     int differentPixels = 0;
@@ -249,7 +261,6 @@ double calculateNPCR(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     double npcRate = (static_cast<double>(differentPixels) / totalPixels) * 100.0;
     return npcRate;
 }
-
 double calculateUACI(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     int totalPixels = encryptedImage1.rows * encryptedImage1.cols * encryptedImage1.channels();
     double sumDiff = 0.0;
@@ -265,7 +276,6 @@ double calculateUACI(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     double uaci = (sumDiff / (totalPixels * 255.0)) * 100.0;
     return uaci;
 }
-
 double calculateHD(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     int totalBits = encryptedImage1.rows * encryptedImage1.cols * encryptedImage1.channels() * 8;
     int hammingDistance = 0;
@@ -284,7 +294,6 @@ double calculateHD(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     double hd = (static_cast<double>(hammingDistance) / totalBits) * 100.0;
     return hd;
 }
-
 double calculateChiSquared(const Mat& encryptedImage1, const Mat& encryptedImage2) {
     double chiSquared = 0.0;
 
@@ -308,7 +317,6 @@ double calculateChiSquared(const Mat& encryptedImage1, const Mat& encryptedImage
 
     return chiSquared;
 }
-
 double calculateHistogramChiSquared(const Mat& encryptedImage) {
     double chiSquared = 0.0;
 
@@ -332,7 +340,6 @@ double calculateHistogramChiSquared(const Mat& encryptedImage) {
 
     return chiSquared;
 }
-
 double calculateInformationEntropy(const Mat& encryptedImage) {
     vector<int> histogram(256, 0);
 
@@ -357,7 +364,6 @@ double calculateInformationEntropy(const Mat& encryptedImage) {
 
     return entropy;
 }
-
 void visualizeHistogram(const Mat& encryptedImage) {
     // Separate the image in 3 places (B, G, R)
     vector<Mat> bgr_planes;
@@ -442,4 +448,45 @@ double calculateEncryptionQuality(const Mat& plainImage, const Mat& encryptedIma
 
     double encryptionQuality = sumDiff / totalBytes;
     return encryptionQuality;
+}
+
+void hideConfidentialInformation(Mat& stegoImage, const string& name, int number) {
+    // Convert your name and ID to binary strings
+    string nameBinary = "01101111 01101101 01100001 01110010 01011111 01101010 01100001 01100010 01100001 01110010 01101001"; // "omar_jabari" in binary
+    string idBinary = "00110010 00110001 00110001 00110001 00110100 00110001 00110001 00110000 00110001 00110100 00110000"; // "21114411014" in binary
+
+    // Concatenate name and ID with a delimiter (e.g., a space) between them
+    string confidentialInfoBinary = nameBinary + " " + idBinary;
+
+    // Get the total number of bits in the confidential information
+    int totalBits = confidentialInfoBinary.size();
+
+    // Flatten the stego image to simplify manipulation
+    Mat flatStegoImage = stegoImage.reshape(1, 1);
+
+    // Get the number of pixels in the image
+    int totalPixels = flatStegoImage.cols;
+
+    // Loop through each bit of the confidential information
+    for (int i = 0; i < totalBits; ++i) {
+        // Get the bit value (0 or 1) at the current position in the confidential information
+        char bit = confidentialInfoBinary[i];
+
+        // Get the pixel index where the bit will be hidden
+        int pixelIndex = i * 3;
+
+        // Get the pixel intensity value
+        uchar& intensity = flatStegoImage.at<uchar>(pixelIndex);
+
+        // Modify the least significant bit of the intensity value to match the bit value from the confidential information
+        intensity = (intensity & 0xFE) | (bit - '0'); // Clear the LSB and set it to the bit value
+
+        // If we reached the end of the confidential information, break the loop
+        if (i >= totalBits) {
+            break;
+        }
+    }
+
+    // Reshape the flat stego image back to its original dimensions
+    stegoImage = flatStegoImage.reshape(3, stegoImage.rows);
 }
