@@ -144,6 +144,7 @@
     <Image Include="..\..\..\..\OneDrive\Documents\project-photos\PeppersRGB.jpg" />
     <Image Include="Encrypted_image.bmp" />
     <Image Include="Encrypted_image.jpg" />
+    <Image Include="Stegoimage.bmp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="encrypted_image.txt" />

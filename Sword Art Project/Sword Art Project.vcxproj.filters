@@ -35,6 +35,9 @@
     <Image Include="Encrypted_image.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="Stegoimage.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="encrypted_image.txt" />
