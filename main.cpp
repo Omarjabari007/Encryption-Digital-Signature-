@@ -320,6 +320,7 @@ void performPlaintextSensitivityTest(const Mat& image) {
 
     waitKey(0);
 }
+// 
 
 double NPCR_test(const Mat& Encrypted_Image_1, const Mat& Encrypted_Image_2) {
     if (Encrypted_Image_1.size() != Encrypted_Image_2.size() || Encrypted_Image_1.type() != Encrypted_Image_2.type()) {
