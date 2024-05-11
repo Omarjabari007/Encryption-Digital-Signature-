@@ -18,10 +18,9 @@ using namespace cv;
 using namespace std;
 using namespace CryptoPP;
 
-// Global variables for key and IV
+// key and iv ..
 SecByteBlock key(AES::DEFAULT_KEYLENGTH);
 SecByteBlock iv(AES::BLOCKSIZE);
-// Forward declarations of functions
 void Information_Hiding(Mat& stegoImage, const string& name, int number);
 double NPCR_test(const Mat& Encrypted_Image_1, const Mat& Encrypted_Image_2);
 double UACI_TEST(const Mat& Encrypted_Image_1, const Mat& Encrypted_Image_2);
@@ -31,7 +30,6 @@ double Chi_Squared_Histogram(const Mat& encryptedImage);
 void Histogram_Visualization(const Mat& encryptedImage);
 double InformationEnrtopy_TEST(const Mat& encryptedImage);
 double encryption_quality_TEST(const Mat& plainImage, const Mat& encryptedImage);
-
 vector<unsigned char> mat_into_vector(const Mat& image) {
     vector<unsigned char> data;
     if (image.isContinuous()) {
@@ -44,7 +42,6 @@ vector<unsigned char> mat_into_vector(const Mat& image) {
     }
     return data;
 }
-
 Mat vector_into_mat(const vector<unsigned char>& data, const Size& size, int type) {
     if (data.size() != size.width * size.height * CV_MAT_CN(type)) {
         cerr << "Data size does not match the expected image dimensions and type." << endl;
@@ -70,7 +67,6 @@ vector<unsigned char> encrypt_data(const vector<unsigned char>& data, size_t& en
     encryptedSize = cipherText.size();
     return vector<unsigned char>(cipherText.begin(), cipherText.end());
 }
-
 vector<unsigned char> decryptData(const vector<unsigned char>& encryptedData) {
     CBC_Mode<AES>::Decryption decryptor;
     decryptor.SetKeyWithIV(key, key.size(), iv);
@@ -87,14 +83,12 @@ void toggleBit(SecByteBlock& block, size_t bitIndex) {
     size_t bitInByteIndex = bitIndex % 8;
     block[byteIndex] ^= (1 << bitInByteIndex);
 }
-
 void performKeySensitivityTest(const Mat& image) {
     auto start = chrono::high_resolution_clock::now();
     vector<unsigned char> imageData = mat_into_vector(image);
     size_t encryptedSize;
     vector<unsigned char> encryptedData = encrypt_data(imageData, encryptedSize, key);
 
-    // Ensure the data is reshaped properly for visualization.
     int side = cvRound(sqrt(encryptedData.size()));
     Mat encryptedImageDisplay = Mat(side, side, CV_8UC1, encryptedData.data());
 
@@ -108,14 +102,14 @@ void performKeySensitivityTest(const Mat& image) {
     // imshow("Encrypted Image - Original Key", encryptedImageDisplay);
      //imshow("Encrypted Image - Modified Key", encryptedImageModifiedDisplay);
     waitKey(0);
-    //Mat stegoImage = image.clone();
-    //string name = "omar_jabari"; // name i wanna to hide
-    //int number = 211144; // id i wanna to hide
-    //Information_Hiding(stegoImage, name, number);
+    Mat stegoImage = image.clone();
+    string name = "omar_jabari"; // name i wanna to hide
+    int number = 211144; // id i wanna to hide
+    Information_Hiding(stegoImage, name, number);
 
     //the stego image ... 
-    //imwrite("Stegoimage.bmp", stegoImage); //as_BMP
-    //cout << "Stegoimage.bmp saved successfully!" << endl;
+    imwrite("Stegoimage.bmp", stegoImage); //as_BMP
+    cout << "Stegoimage.bmp saved successfully!" << endl;
 
 
     cout << "Our Tasks ! " << endl;
@@ -192,10 +186,10 @@ void performKeySensitivityTest(const Mat& image) {
             cout << " Encryption Time in NCPB  Can't be done in this  easy  , some addition tests and hardware needs to measure first ." << endl;
 
         }
-        //else if (choice == 10) {
-           // imshow("StegoImage", stegoImage);
-          //  waitKey(0);
-     //   }
+        else if (choice == 10) {
+            imshow("StegoImage", stegoImage);
+            waitKey(0);
+        }
         else if (choice == 11) {
 
             flag = false;
@@ -205,10 +199,11 @@ void performKeySensitivityTest(const Mat& image) {
         }
     }
 
-}
+} //key
+
 void performPlaintextSensitivityTest(const Mat& image) {
     Mat image2 = image.clone();
-    image2.at<Vec3b>(0, 0)[0] ^= 0x01;  // Toggle first bit of the first pixel
+    image2.at<Vec3b>(0, 0)[0] ^= 0x01;  
     auto start = chrono::high_resolution_clock::now();
     vector<unsigned char> imageData1 = mat_into_vector(image);
     vector<unsigned char> imageData2 = mat_into_vector(image2);
@@ -216,11 +211,9 @@ void performPlaintextSensitivityTest(const Mat& image) {
     vector<unsigned char> encryptedData1 = encrypt_data(imageData1, encryptedSize1, key);
     vector<unsigned char> encryptedData2 = encrypt_data(imageData2, encryptedSize2, key);
 
-    // Assuming encryption preserves the size of the data, reshape to match the original image dimensions
     Mat encryptedImage1 = Mat(image.size(), image.type(), encryptedData1.data());
     Mat encryptedImage2 = Mat(image.size(), image.type(), encryptedData2.data());
 
-    // Normalize the images since the data is likely not in the typical range of [0, 255]
     normalize(encryptedImage1, encryptedImage1, 0, 255, NORM_MINMAX, CV_8UC1);
     normalize(encryptedImage2, encryptedImage2, 0, 255, NORM_MINMAX, CV_8UC1);
     auto end = chrono::high_resolution_clock::now();
@@ -228,6 +221,15 @@ void performPlaintextSensitivityTest(const Mat& image) {
     cout << "Displaying encrypted images with original and slightly modified plaintext." << endl;
     //imshow("Encrypted Image - Original Plaintext", encryptedImage1);
    // imshow("Encrypted Image - Modified Plaintext", encryptedImage2);
+
+    Mat stegoImage = image.clone();
+    string name = "omar_jabari"; // name i wanna to hide
+    int number = 211144; // id i wanna to hide
+    Information_Hiding(stegoImage, name, number);
+
+    //the stego image ... 
+    imwrite("Stegoimage.bmp", stegoImage); //as_BMP
+    cout << "Stegoimage.bmp saved successfully!" << endl;
 
 
     cout << "Our Tasks ! " << endl;
@@ -303,10 +305,10 @@ void performPlaintextSensitivityTest(const Mat& image) {
             cout << " Encryption Time in NCPB  Can't be done in this  easy  , some addition tests and hardware needs to measure first ." << endl;
 
         }
-        //else if (choice == 10) {
-           // imshow("StegoImage", stegoImage);
-          //  waitKey(0);
-     //   }
+        else if (choice == 10) {
+            imshow("StegoImage", stegoImage);
+            waitKey(0);
+        }
         else if (choice == 11) {
 
             flag = false;
@@ -318,10 +320,11 @@ void performPlaintextSensitivityTest(const Mat& image) {
 
     waitKey(0);
 }
+
 double NPCR_test(const Mat& Encrypted_Image_1, const Mat& Encrypted_Image_2) {
     if (Encrypted_Image_1.size() != Encrypted_Image_2.size() || Encrypted_Image_1.type() != Encrypted_Image_2.type()) {
         cerr << "Error: Image sizes or types do not match." << endl;
-        return 0;  // Return 0 or handle as needed.
+        return 0;  
     }
     int totalPixels = Encrypted_Image_1.rows * Encrypted_Image_1.cols * Encrypted_Image_1.channels();
     int differentPixels = 0;
@@ -488,24 +491,43 @@ double Chi_Squared_Histogram(const Mat& encryptedImage) {
 }
 
 double InformationEnrtopy_TEST(const Mat& encryptedImage) {
+    double entropy = 0.0;
     vector<int> histogram(256, 0);
-    // show histogram and calcualte
-    for (int i = 0; i < encryptedImage.rows; ++i) {
-        for (int j = 0; j < encryptedImage.cols; ++j) {
-            for (int k = 0; k < encryptedImage.channels(); ++k) {
-                histogram[encryptedImage.at<Vec3b>(i, j)[k]]++;
+    if (encryptedImage.channels() == 3) {
+
+
+        for (int i = 0; i < encryptedImage.rows; ++i) {
+            for (int j = 0; j < encryptedImage.cols; ++j) {
+                for (int k = 0; k < encryptedImage.channels(); ++k) {
+                    histogram[encryptedImage.at<Vec3b>(i, j)[k]]++;
+                }
+            }
+        }
+
+        double totalPixels = encryptedImage.rows * encryptedImage.cols * encryptedImage.channels();
+        for (int i = 0; i < 256; ++i) {
+            if (histogram[i] > 0) {
+                double probability = static_cast<double>(histogram[i]) / totalPixels;
+                entropy += probability * log2(1 / probability);
             }
         }
     }
-    //find  entropy
-    double entropy = 0.0;
-    double totalPixels = encryptedImage.rows * encryptedImage.cols * encryptedImage.channels();
-    for (int i = 0; i < 256; ++i) {
-        if (histogram[i] > 0) {
-            double probability = static_cast<double>(histogram[i]) / totalPixels;
-            entropy += probability * log2(1 / probability);
+    else if (encryptedImage.channels() == 1) {
+        for (int i = 0; i < encryptedImage.rows; ++i) {
+            for (int j = 0; j < encryptedImage.cols; ++j) {
+                int pixelValue = encryptedImage.at<uchar>(i, j);
+                histogram[pixelValue]++;
+            }
+        }
+        double totalPixels = encryptedImage.rows * encryptedImage.cols * encryptedImage.channels();
+        for (int i = 0; i < 256; ++i) {
+            if (histogram[i] > 0) {
+                double probability = static_cast<double>(histogram[i]) / totalPixels;
+                entropy += probability * log2(1 / probability);
+            }
         }
     }
+
     return entropy;
 }
 void Histogram_Visualization(const Mat& encryptedImage) {
@@ -521,27 +543,20 @@ void Histogram_Visualization(const Mat& encryptedImage) {
         cerr << "Error: Expected three channels in the image." << endl;
         return;
     }
-
     int histSize = 256;
     float range[] = { 0, 256 };
     const float* histRange = { range };
     bool uniform = true, accumulate = false;
-
     Mat b_hist, g_hist, r_hist;
     calcHist(&bgr_planes[0], 1, nullptr, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate);
     calcHist(&bgr_planes[1], 1, nullptr, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate);
     calcHist(&bgr_planes[2], 1, nullptr, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate);
-
     int hist_w = 512, hist_h = 400;
     int bin_w = cvRound((double)hist_w / histSize);
     Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(0, 0, 0));
-
-    // Normalize the result to [0, histImage.rows]
     normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
     normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
     normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
-
-    // Draw for each channel
     for (int i = 1; i < histSize; i++) {
         line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(b_hist.at<float>(i - 1))),
             Point(bin_w * i, hist_h - cvRound(b_hist.at<float>(i))),
@@ -553,39 +568,45 @@ void Histogram_Visualization(const Mat& encryptedImage) {
             Point(bin_w * i, hist_h - cvRound(r_hist.at<float>(i))),
             Scalar(0, 0, 255), 2, 8, 0);
     }
-
     namedWindow("Histogram", WINDOW_AUTOSIZE);
     imshow("Histogram", histImage);
     waitKey(0);
 }
-
 double encryption_quality_TEST(const Mat& plainImage, const Mat& encryptedImage) {
     int totalBytes = 256;
     double sumDiff = 0.0;
     vector<int> observedPlain(256, 0);
-    for (int i = 0; i < plainImage.rows; ++i) {
-        for (int j = 0; j < plainImage.cols; ++j) {
-            for (int k = 0; k < plainImage.channels(); ++k) {
-                observedPlain[plainImage.at<Vec3b>(i, j)[k]]++;
-            }
-        }
-    }
     vector<int> observedEncrypted(256, 0);
-    for (int i = 0; i < encryptedImage.rows; ++i) {
-        for (int j = 0; j < encryptedImage.cols; ++j) {
-            for (int k = 0; k < encryptedImage.channels(); ++k) {
-                observedEncrypted[encryptedImage.at<Vec3b>(i, j)[k]]++;
+
+    if (plainImage.channels() == 3) {
+        // Handle color images
+        for (int i = 0; i < plainImage.rows; ++i) {
+            for (int j = 0; j < plainImage.cols; ++j) {
+                for (int k = 0; k < plainImage.channels(); ++k) {
+                    observedPlain[plainImage.at<Vec3b>(i, j)[k]]++;
+                    observedEncrypted[encryptedImage.at<Vec3b>(i, j)[k]]++;
+                }
             }
         }
     }
-    for (int i = 0; i < 256; ++i) {
-        sumDiff += abs(observedPlain[i] - observedEncrypted[i]);
+    else if (plainImage.channels() == 1) {
+        for (int i = 0; i < plainImage.rows; ++i) {
+            for (int j = 0; j < plainImage.cols; ++j) {
+                int plainPixel = plainImage.at<uchar>(i, j);
+                int encryptedPixel = encryptedImage.at<uchar>(i, j);
+                observedPlain[plainPixel]++;
+                observedEncrypted[encryptedPixel]++;
+            }
+        }
     }
-    double encryption_quality_ = sumDiff / totalBytes;
+
+    for (int i = 0; i < 256; ++i ) {
+        sumDiff += abs(observedPlain[i] - observedEncrypted[i] ) ;
+    }
+    double encryption_quality_ = sumDiff / totalBytes;  
     return encryption_quality_;
 }
-
-void Information_Hiding(Mat& stegoImage, const string& name, int number) {
+void Information_Hiding( Mat& stegoImage , const string& name ,  int number ) {
     string nameBinary = "01101111 01101101 01100001 01110010 01011111 01101010 01100001 01100010 01100001 01110010 01101001"; //  the hiding info name "omar_jabari" in binary
     string idBinary = "00110010 00110001 00110001 00110001 00110100 00110001 00110001 00110000 00110001 00110100 00110000"; //  hiding id in the image "21114411014" in binary
     string confidentialInfoBinary = nameBinary + " " + idBinary;
