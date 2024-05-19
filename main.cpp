@@ -1,6 +1,7 @@
 #include <iostream>
 #include<algorithm>
 #include<map>
+#include <bitset>
 #include <iomanip>
 #include <chrono>
 #include <vector>
@@ -24,18 +25,17 @@ using namespace CryptoPP;
 // key and iv ..
 SecByteBlock key(AES::DEFAULT_KEYLENGTH);
 SecByteBlock iv(AES::BLOCKSIZE);
-void Information_Hiding(Mat& stegoImage, const string& name, int number);
-double encryption_quality_TEST(const Mat& plainImage,  const Mat& encryptedImage ) {
-    int totalBytes = 256 ;
-    double sumDiff = 0.0 ;
+double encryption_quality_TEST(const Mat& plainImage, const Mat& encryptedImage) {
+    int totalBytes = 256;
+    double sumDiff = 0.0;
     vector<int> observedPlain(256, 0);
     vector<int> observedEncrypted(256, 0);
 
     if (plainImage.channels() == 3) {
         // Handle color images
-        for (int i = 0 ; i < plainImage.rows; ++i ) {
-            for (int j = 0 ; j < plainImage.cols; ++j ) {
-                for (int k  = 0; k < plainImage.channels(); ++k ) {
+        for (int i = 0; i < plainImage.rows; ++i) {
+            for (int j = 0; j < plainImage.cols; ++j) {
+                for (int k = 0; k < plainImage.channels(); ++k) {
                     observedPlain[plainImage.at<Vec3b>(i, j)[k]]++;
                     observedEncrypted[encryptedImage.at<Vec3b>(i, j)[k]]++;
                 }
@@ -43,8 +43,8 @@ double encryption_quality_TEST(const Mat& plainImage,  const Mat& encryptedImage
         }
     }
     else if (plainImage.channels() == 1) {
-        for (int i  = 0; i  < plainImage.rows; ++i ) {
-            for (int j = 0; j < plainImage.cols; ++j ) {
+        for (int i = 0; i < plainImage.rows; ++i) {
+            for (int j = 0; j < plainImage.cols; ++j) {
                 int plainPixel = plainImage.at<uchar>(i, j);
                 int encryptedPixel = encryptedImage.at<uchar>(i, j);
                 observedPlain[plainPixel]++;
@@ -53,10 +53,10 @@ double encryption_quality_TEST(const Mat& plainImage,  const Mat& encryptedImage
         }
     }
 
-    for (int i = 0 ; i < 256 ; ++i ) {
-        sumDiff += abs( observedPlain[i] - observedEncrypted[i] );
+    for (int i = 0; i < 256; ++i) {
+        sumDiff += abs(observedPlain[i] - observedEncrypted[i]);
     }
-    double encryption_quality_ =  sumDiff /  totalBytes;
+    double encryption_quality_ = sumDiff / totalBytes;
     return encryption_quality_;
 }
 vector<unsigned char> mat_into_vector(const Mat& image) {
@@ -250,51 +250,51 @@ void Histogram_Visualization(const Mat& encryptedImage) {
         return;
     }
     int histSize = 256;
-    float range[] = { 0, 256  };
+    float range[] = { 0, 256 };
     const float* histRange = { range };
     bool uniform = true, accumulate = false;
-    Mat b_hist, g_hist,  r_hist;
-    calcHist(&bgr_planes[0],  1, nullptr, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate);
+    Mat b_hist, g_hist, r_hist;
+    calcHist(&bgr_planes[0], 1, nullptr, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate);
     calcHist(&bgr_planes[1], 1, nullptr, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate);
     calcHist(&bgr_planes[2], 1, nullptr, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate);
     int hist_w = 512, hist_h = 400;
     int bin_w = cvRound((double)hist_w / histSize);
     Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(0, 0, 0));
-    normalize(b_hist, b_hist, 0 , histImage.rows, NORM_MINMAX, -1,  Mat());
+    normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
     normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
     normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
     for (int i = 1; i < histSize; i++) {
-        line(histImage, Point(bin_w * (i - 1), hist_h -  cvRound(b_hist.at<float>(i - 1))),
+        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(b_hist.at<float>(i - 1))),
             Point(bin_w * i, hist_h - cvRound(b_hist.at<float>(i))),
-            Scalar(255, 0, 0 ), 2, 8, 0);
-        line(histImage, Point(bin_w * (i - 1), hist_h -  cvRound(g_hist.at<float>(i - 1))),
+            Scalar(255, 0, 0), 2, 8, 0);
+        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(g_hist.at<float>(i - 1))),
             Point(bin_w * i, hist_h - cvRound(g_hist.at<float>(i))),
-            Scalar(0, 255 , 0 ) , 2 , 8 , 0 );
-        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(r_hist.at<float>(i - 1)) ),
+            Scalar(0, 255, 0), 2, 8, 0);
+        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(r_hist.at<float>(i - 1))),
             Point(bin_w * i, hist_h - cvRound(r_hist.at<float>(i))),
-            Scalar(0 , 0 , 255 ) , 2 , 8 , 0 );
+            Scalar(0, 0, 255), 2, 8, 0);
     }
     namedWindow("Histogram", WINDOW_AUTOSIZE);
     imshow("Histogram", histImage);
     waitKey(0);
 }
-double InformationEnrtopy_TEST(const Mat& encryptedImage )
+double InformationEnrtopy_TEST(const Mat& encryptedImage)
 {
-    double entropy = 0.0 ;
-    vector<int> histogram(256, 0) ;
-    if (encryptedImage.channels() == 3)  {
+    double entropy = 0.0;
+    vector<int> histogram(256, 0);
+    if (encryptedImage.channels() == 3) {
 
 
-        for (int i = 0; i < encryptedImage.rows; ++i ) {
-            for (int j = 0; j < encryptedImage.cols; ++j ) {
-                for (int k = 0 ; k < encryptedImage.channels() ; ++k ) {
+        for (int i = 0; i < encryptedImage.rows; ++i) {
+            for (int j = 0; j < encryptedImage.cols; ++j) {
+                for (int k = 0; k < encryptedImage.channels(); ++k) {
                     histogram[encryptedImage.at<Vec3b>(i, j)[k]]++;
                 }
             }
         }
 
-        double totalPixels = encryptedImage.rows * encryptedImage.cols * encryptedImage.channels() ;
-        for (int i = 0; i < 256 ; ++i ) {
+        double totalPixels = encryptedImage.rows * encryptedImage.cols * encryptedImage.channels();
+        for (int i = 0; i < 256; ++i) {
             if (histogram[i] > 0) {
                 double probability = static_cast<double>(histogram[i]) / totalPixels;
                 entropy += probability * log2(1 / probability);
@@ -329,7 +329,7 @@ Mat vector_into_mat(const vector<unsigned char>& data, const Size& size, int typ
     memcpy(image.data, data.data(), data.size());
     return image;
 }
-vector<unsigned char> encrypt_data(const vector<unsigned char>& data, size_t& encryptedSize, const SecByteBlock& keyUsed) {
+vector<unsigned char> encrypt_data0(const vector<unsigned char>& data, size_t& encryptedSize, const SecByteBlock& keyUsed) {
     CBC_Mode<AES>::Encryption encryptor;
     encryptor.SetKeyWithIV(keyUsed, keyUsed.size(), iv);
 
@@ -343,17 +343,6 @@ vector<unsigned char> encrypt_data(const vector<unsigned char>& data, size_t& en
 
     encryptedSize = cipherText.size();
     return vector<unsigned char>(cipherText.begin(), cipherText.end());
-} 
-vector<unsigned char> decryptData(const vector<unsigned char>& encryptedData) {
-    CBC_Mode<AES>::Decryption decryptor;
-    decryptor.SetKeyWithIV(key, key.size(), iv);
-    string decryptedText;
-    StringSource(encryptedData.data(), encryptedData.size(), true,
-        new StreamTransformationFilter(decryptor,
-            new StringSink(decryptedText)
-        )
-    );
-    return vector<unsigned char>(decryptedText.begin(), decryptedText.end());
 }
 void toggleBit(SecByteBlock& block, size_t bitIndex) {
     size_t byteIndex = bitIndex / 8;
@@ -364,30 +353,18 @@ void performKeySensitivityTest(const Mat& image) {
     auto start = chrono::high_resolution_clock::now();
     vector<unsigned char> imageData = mat_into_vector(image);
     size_t encryptedSize;
-    vector<unsigned char> encryptedData = encrypt_data(imageData, encryptedSize, key);
+    vector<unsigned char> encryptedData = encrypt_data0(imageData, encryptedSize, key);
 
     int side = cvRound(sqrt(encryptedData.size()));
     Mat encryptedImageDisplay = Mat(side, side, CV_8UC1, encryptedData.data());
     SecByteBlock keyModified = key;
     toggleBit(keyModified, 0);
-    vector<unsigned char> encryptedDataModified = encrypt_data(imageData, encryptedSize, keyModified);
+    vector<unsigned char> encryptedDataModified = encrypt_data0(imageData, encryptedSize, keyModified);
     Mat encryptedImageModifiedDisplay = Mat(side, side, CV_8UC1, encryptedDataModified.data());
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
     cout << "Displaying encrypted images with original and modified keys." << endl;
-    // imshow("Encrypted Image - Original Key", encryptedImageDisplay);
-     //imshow("Encrypted Image - Modified Key", encryptedImageModifiedDisplay);
     waitKey(0);
-    Mat stegoImage = image.clone();
-    string name = "omar_jabari"; // name i wanna to hide
-    int number = 211144; // id i wanna to hide
-    Information_Hiding(stegoImage, name, number);
-
-    //the stego image ... 
-    imwrite("Stegoimage.bmp", stegoImage); //as_BMP
-    cout << "Stegoimage.bmp saved successfully!" << endl;
-
-
     cout << "Our Tasks ! " << endl;
     cout << "Choice1:" << " " << "Encryption...Images" << endl;
     cout << "Choice2:" << " " << "NPCR_TEST !" << endl;
@@ -398,15 +375,12 @@ void performKeySensitivityTest(const Mat& image) {
     cout << "Choice7:" << " " << "Information Entropy:!" << endl;
     cout << "Choice8:" << " " << "Encryption Quality:" << endl;
     cout << "Choice9:" << " " << "Encryption_Time:" << endl;
-    cout << "Choice10:" << " " << "SteaganoGraphy image ..  :" << endl;
-    cout << "Choice11:" << " " << "Quit :" << endl;
-    cout << "(Encryption  & SteganoGraphy ) System .. !" << endl;
-
-
+    cout << "Choice10:" << " " << "Quit :" << endl;
+    cout << "(Encryption  System .. !)" << endl;
     bool flag = true;
     while (flag) {
         int choice;
-        cout << "Enter choice between  --_ 1 and 11 _ --: ";
+        cout << "Enter choice between  --_ 1 and 10 _ --: ";
         cin >> choice;
 
         if (choice == 1) {
@@ -422,7 +396,7 @@ void performKeySensitivityTest(const Mat& image) {
         }
         else if (choice == 3) {
             double uaci = UACI_TEST(encryptedImageDisplay, encryptedImageModifiedDisplay);
-            cout << "<UACI (Unified Average CI>: " << fixed << setprecision(2) << uaci << "%" << endl;
+            cout << "<UACI (Unified Average CI>: " << fixed << setprecision(2) << uaci * 100 << "%" << endl;
         }
         else if (choice == 4) {
             double hd = HD_TEST(encryptedImageDisplay, encryptedImageModifiedDisplay);
@@ -459,27 +433,23 @@ void performKeySensitivityTest(const Mat& image) {
             cout << "Encryption Time: " << fixed << setprecision(5) << encryption_time_measure << " seconds" << endl;
             cout << " Encryption Time in NCPB  Can't be done in this  easy  , some addition tests and hardware needs to measure first ." << endl;
         }
-        else if (choice == 10) {
-            imshow("StegoImage", stegoImage);
-            waitKey(0);
-        }
-        else if (choice == 11) {
+        else if (choice ==10) {
             flag = false;
         }
         else {
-            cout << "Inavlid ,, please choose a number betwee 1 and 11 . " << endl;
+            cout << "Inavlid ,, please choose a number betwee 1 and 10 . " << endl;
         }
     }
 } //key
 void performPlaintextSensitivityTest(const Mat& image) {
     Mat image2 = image.clone();
-    image2.at<Vec3b>(0, 0)[0] ^= 0x01;  
+    image2.at<Vec3b>(0, 0)[0] ^= 0x01;
     auto start = chrono::high_resolution_clock::now();
     vector<unsigned char> imageData1 = mat_into_vector(image);
     vector<unsigned char> imageData2 = mat_into_vector(image2);
     size_t encryptedSize1, encryptedSize2;
-    vector<unsigned char> encryptedData1 = encrypt_data(imageData1, encryptedSize1, key);
-    vector<unsigned char> encryptedData2 = encrypt_data(imageData2, encryptedSize2, key);
+    vector<unsigned char> encryptedData1 = encrypt_data0(imageData1, encryptedSize1, key);
+    vector<unsigned char> encryptedData2 = encrypt_data0(imageData2, encryptedSize2, key);
 
     Mat encryptedImage1 = Mat(image.size(), image.type(), encryptedData1.data());
     Mat encryptedImage2 = Mat(image.size(), image.type(), encryptedData2.data());
@@ -489,17 +459,6 @@ void performPlaintextSensitivityTest(const Mat& image) {
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
     cout << "Displaying encrypted images with original and slightly modified plaintext." << endl;
-    //imshow("Encrypted Image - Original Plaintext", encryptedImage1);
-   // imshow("Encrypted Image - Modified Plaintext", encryptedImage2);
-
-    Mat stegoImage = image.clone();
-    string name = "omar_jabari"; // name i wanna to hide
-    int number = 211144; // id i wanna to hide
-    Information_Hiding(stegoImage, name, number);
-
-    //the stego image ... 
-    imwrite("Stegoimage.bmp", stegoImage); //as_BMP
-    cout << "Stegoimage.bmp saved successfully!" << endl;
     cout << "Our Tasks ! " << endl;
     cout << "Choice1:" << " " << "Encryption...Images" << endl;
     cout << "Choice2:" << " " << "NPCR_TEST !" << endl;
@@ -510,15 +469,13 @@ void performPlaintextSensitivityTest(const Mat& image) {
     cout << "Choice7:" << " " << "Information Entropy:!" << endl;
     cout << "Choice8:" << " " << "Encryption Quality:" << endl;
     cout << "Choice9:" << " " << "Encryption_Time:" << endl;
-    cout << "Choice10:" << " " << "SteaganoGraphy image ..  :" << endl;
-    cout << "Choice11:" << " " << "Quit :" << endl;
-    cout << "(Encryption  & SteganoGraphy ) System .. !" << endl;
+    cout << "Choice10:" << " " << "Quit :" << endl;
+    cout << "(Encryption  System .. !)" << endl;
     bool flag = true;
     while (flag) {
         int choice;
-        cout << "Enter choice between  --_ 1 and 11 _ --: ";
+        cout << "Enter choice between  --_ 1 and 10 _ --: ";
         cin >> choice;
-
         if (choice == 1) {
             imshow("Encrypted image 1", encryptedImage1);
             imshow("Encrypted image 2", encryptedImage2);
@@ -572,92 +529,273 @@ void performPlaintextSensitivityTest(const Mat& image) {
 
         }
         else if (choice == 10) {
-            imshow("StegoImage", stegoImage);
-            waitKey(0);
-        }
-        else if (choice == 11) {
-
             flag = false;
         }
         else {
-            cout << "Inavlid ,, please choose a number betwee 1 and 11 . " << endl;
+            cout << "Inavlid ,, please choose a number betwee 1 and 10 . " << endl;
         }
     }
-
     waitKey(0);
 }
-void Information_Hiding( Mat& stegoImage , const string& name ,  int number ) {
-    string nameBinary = "01101111 01101101 01100001 01110010 01011111 01101010 01100001 01100010 01100001 01110010 01101001"; //  the hiding info name "omar_jabari" in binary
-    string idBinary = "00110010 00110001 00110001 00110001 00110100 00110001 00110001 00110000 00110001 00110100 00110000"; //  hiding id in the image "21114411014" in binary
-    string confidentialInfoBinary = nameBinary + " " + idBinary;
-    int totalBits = confidentialInfoBinary.size();
-    Mat flatStegoImage = stegoImage.reshape(1, 1);
-    int totalPixels = flatStegoImage.cols;
-    for (int i = 0; i < totalBits; ++i) {
-        char bit = confidentialInfoBinary[i];
-        int pixelIndex = i * 3;
-        uchar& intensity = flatStegoImage.at<uchar>(pixelIndex);
-        intensity = (intensity & 0xFE) | (bit - '0');
-        if (i >= totalBits) {
-            break;
+// byte fucntions  :  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+vector<byte> IntegerIntoByte(const vector<int>& data) {
+    return vector<byte>(data.begin(), data.end());
+}
+vector<int> MatrixIntoVector(const cv::Mat& img) {
+    vector<int> ans;
+    for (int i = 0; i < img.rows; i++) {
+        for (int j = 0; j < img.cols; j++) {
+            const cv::Vec3b& Pixel = img.at<cv::Vec3b>(i, j);
+            for (int x = 0; x < 3; x++) {
+                ans.push_back(Pixel[x]);
+            }
         }
     }
-    stegoImage = flatStegoImage.reshape(3, stegoImage.rows);
+    return ans;
+}
+cv::Mat VectorIntoMatrix(const vector<int>& data, const long long& rows, const long long& cols) {
+    long long idx(0);
+    cv::Mat img(cols, rows, CV_8UC3, cv::Scalar(0, 0, 0));
+    for (long long i = 0; i < rows; i++) {
+        for (long long j = 0; j < cols; j++) {
+            cv::Vec3b& pixel = img.at<cv::Vec3b>(i, j);
+            for (int x = 0; x < 3; x++) {
+                pixel[x] = data[idx++];
+            }
+        }
+    }
+    return img;
+}
+vector<byte> encrypt_data(const vector<byte>& data) {
+    CBC_Mode<AES>::Encryption encryptor;
+    encryptor.SetKeyWithIV(key, key.size(), iv);
+
+    vector<byte> cipherText;
+    VectorSource(data, true,
+        new StreamTransformationFilter(encryptor,
+            new VectorSink(cipherText)
+        )
+    );
+
+    //encryptedSize = cipherText.size();
+    //return vector<unsigned char>(cipherText.begin(), cipherText.end());
+    return cipherText;
+}
+vector<byte> decrypt_data(const vector<byte>& encryptedData) {
+    CBC_Mode<AES>::Decryption decryptor;
+    decryptor.SetKeyWithIV(key, key.size(), iv);
+    vector<byte> decryptedData;
+    VectorSource(encryptedData, true,
+        new StreamTransformationFilter(decryptor,
+            new VectorSink(decryptedData)
+        )
+    );
+    return decryptedData;
+}
+vector<int> ByteIntoInteger(vector<byte>& data) {
+    return vector<int>(data.begin(), data.end());
+}
+//
+void hideDataInImage(Mat& image, const string& data) {
+    // Convert data to binary
+    string binaryData;
+    for (char c : data) {
+        binaryData += bitset<8>(c).to_string();
+    }
+    int dataIndex = 0;
+    for (int row = 0; row < image.rows; ++row) {
+        for (int col = 0; col < image.cols; ++col) {
+            if (dataIndex < binaryData.size()) {
+                Vec3b pixel = image.at<Vec3b>(row, col);
+                for (int color = 0; color < 3; ++color) {
+                    if (dataIndex < binaryData.size()) {
+                        pixel[color] = (pixel[color] & 0xFE) | (binaryData[dataIndex] - '0');
+                        ++dataIndex;
+                    }
+                }
+                image.at<Vec3b>(row, col) = pixel;
+            }
+            else {
+                return;
+            }
+        }
+    }
+}
+string retrieveDataFromImage(const Mat& image, int dataLength) {
+    string binaryData;
+    int dataIndex = 0;
+    for (int row = 0; row < image.rows; ++row) {
+        for (int col = 0; col < image.cols; ++col) {
+            if (dataIndex < dataLength * 8) {
+                Vec3b pixel = image.at<Vec3b>(row, col);
+                for (int color = 0; color < 3; ++color) {
+                    if (dataIndex < dataLength * 8) {
+                        binaryData += (pixel[color] & 0x01) ? '1' : '0';
+                        ++dataIndex;
+                    }
+                }
+            }
+            else {
+                break;
+            }
+        }
+    }
+    string data;
+    for (size_t i = 0; i < binaryData.size(); i += 8) {
+        bitset<8> byte(binaryData.substr(i, 8));
+        data += char(byte.to_ulong());
+    }
+    return data;
 }
 int main() {
     AutoSeededRandomPool prng;
     prng.GenerateBlock(key, key.size());
     prng.GenerateBlock(iv, iv.size());
-
-   // Mat image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\gray.png");
-    int imageTypeChoice;  // Declaration of the imageTypeChoice variable
-    cout << "Select image type:" << endl;
-    cout << "1. Color image" << endl;
-    cout << "2. Grayscale image" << endl;
-    cin >> imageTypeChoice;
-    Mat image;
-    if (imageTypeChoice == 1) {
-        image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", IMREAD_COLOR);
-    }
-    else if (imageTypeChoice == 2) {
-        image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\gray.png", IMREAD_GRAYSCALE);
-        cout << "Image dimensions: " << image.cols  << "x" << image.rows << ", Channels: " << image.channels()  << endl ;
-        if (image.channels() == 1) {
-            cvtColor(image, image, COLOR_GRAY2BGR);
+    cout << "Choose a data method  ? " << endl; 
+    cout << "1- Unsigned Charecter Data " << endl;
+    cout << "2- Byte Data" << endl; // better for encryption / decryption 
+    int data_method; cin >> data_method; 
+    if (data_method == 1) {
+        int imageTypeChoice;  // Declaration of the imageTypeChoice variable
+        cout << "Select image type:" << endl;
+        cout << "1. Color image" << endl;
+        cout << "2. Grayscale image" << endl;
+        cin >> imageTypeChoice;
+        Mat image;
+        if (imageTypeChoice == 1) {
+            image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", IMREAD_COLOR);
         }
-        if (image.cols == 0 && image.rows == 0) {
-            cout << "Error : Image size is not fixed ! " << endl;
+        else if (imageTypeChoice == 2) {
+            image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\gray.png", IMREAD_GRAYSCALE);
+            cout << "Image dimensions: " << image.cols << "x" << image.rows << ", Channels: " << image.channels() << endl;
+            if (image.channels() == 1) {
+                cvtColor(image, image, COLOR_GRAY2BGR);
+            }
+            if (image.cols == 0 && image.rows == 0) {
+                cout << "Error : Image size is not fixed ! " << endl;
+            }
+        }
+        else {
+            cout << "Invalid image type ..." << endl;
+            return -1;
+        }
+        if (image.empty()) {
+            cout << "Could not find the image" << endl;
+            return -1;
+        }
+        int choice;
+        cout << "Enter choice between 1 and 2 for tests: " << endl;
+        cout << "1- Key Sensitivity Attack" << endl;
+        cout << "2- Plain TextSenestivity Attack" << endl;
+        cin >> choice;
+        switch (choice) {
+        case 1:
+            performKeySensitivityTest(image);
+            break;
+        case 2:
+            performPlaintextSensitivityTest(image);
+            break;
+        default:
+            cout << "Invalid choice. Please select 1 or 2." << endl;
         }
     }
     else {
-        cout << "Invalid image type ..." << endl;
-        return -1;
-    }
-    if (image.empty()) {
-        cout << "Could not find the image" << endl;
-        return -1;
-    }
-    Mat stegoImage = image.clone();
-    string name = "omar_jabari"; // name i wanna to hide
-    int number = 211144; // id i wanna to hide
-    Information_Hiding(stegoImage, name, number);
-    //the stego image ... 
-    imwrite("Stegoimage.bmp", stegoImage); //as_BMP
-    cout << "Stegoimage.bmp saved successfully!" << endl;
-    int choice;
-    cout << "Enter choice between 1 and 2 for tests: " << endl;
-    cout << "1- Key Sensitivity Attack" << endl;
-    cout << "2- Plain TextSenestivity Attack" << endl;
-    cin >> choice;
-    switch (choice) {
-    case 1:
-        performKeySensitivityTest(image);
-        break;
-    case 2:
-        performPlaintextSensitivityTest(image);
-        break;
-    default:
-        cout << "Invalid choice. Please select 1 or 2." << endl;
+        // new functions for this method of data ... i will use the byte data only for encrpytion and decryption and maybe for some tests ...
+        cout << "Select image type:" << endl;
+        cout << "1. Color image" << endl;
+        cout << "2. Grayscale image" << endl;
+        cout << "3. Hiding image" << endl;
+            int color_choice; cin >> color_choice;
+            if (color_choice == 1) {
+                cout << "Encryption : 1 " << endl;
+                cout << "Decryption : 2 " << endl;
+           while (true) {
+                    int lost; cin >> lost;
+                    cv::Mat image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", IMREAD_COLOR);
+                    vector<int> imageVector = MatrixIntoVector(image);
+                    vector<byte> byteVectorImage = IntegerIntoByte(imageVector);
+                    vector<byte> omarvector = encrypt_data(byteVectorImage);
+                    vector<int> IntegerVector = ByteIntoInteger(omarvector);
+                    vector<byte> decryptedByteVector = decrypt_data(omarvector);
+                    vector<int> decryptedIntegerVector = ByteIntoInteger(decryptedByteVector);
+                    cv::Mat img = VectorIntoMatrix(IntegerVector, image.cols, image.rows);
+                    cv::Mat newImg = VectorIntoMatrix(decryptedIntegerVector, img.cols, img.rows);
+                    if (lost == 1) {
+                        cv::imwrite("C:\\Users\\omarj\\source\\repos\\Sword Art Project\\Sword Art Project\\Byte_Enc_Dec\\encrypted_Byte.bmp", img);
+                        cout << "Encrypted Saved ..." << endl;
+                        imshow("Encrypted Image", img);
+                        waitKey(0);
+                    }
+                    else if (lost == 2) {
+                        cv::imwrite("C:\\Users\\omarj\\source\\repos\\Sword Art Project\\Sword Art Project\\Byte_Enc_Dec\\decrypted.bmp", newImg);
+                        cout << "Decrypted Saved ..." << endl;
+                        imshow("Decrypted Image", newImg);
+                        waitKey(0);
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+            else if (color_choice == 2) {
+                cout << "Encryption : 1 " << endl;
+                cout << "Decryption : 2 " << endl;
+                while (true) {
+                    int lost; cin >> lost;
+                    cv::Mat image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\gray.png", IMREAD_GRAYSCALE);
+                    vector<int> imageVector = MatrixIntoVector(image);
+                    vector<byte> byteVectorImage = IntegerIntoByte(imageVector);
+                    vector<byte> omarvector = encrypt_data(byteVectorImage);
+                    vector<int> IntegerVector = ByteIntoInteger(omarvector);
+                    vector<byte> decryptedByteVector = decrypt_data(omarvector);
+                    vector<int> decryptedIntegerVector = ByteIntoInteger(decryptedByteVector);
+                    cv::Mat img = VectorIntoMatrix(IntegerVector, image.cols, image.rows);
+                    cv::Mat newImg = VectorIntoMatrix(decryptedIntegerVector, img.cols, img.rows);
+                    if (lost == 1) {
+                        cv::imwrite("C:\\Users\\omarj\\source\\repos\\Sword Art Project\\Sword Art Project\\Byte_Enc_Dec\\encrypted_gray_Byte.bmp", img);
+                        cout << "Encrypted Saved ..." << endl;
+                        imshow("Encrypted Image", img);
+                        waitKey(0);
+                    }
+                    else if (lost == 2) {
+                        cv::imwrite("C:\\Users\\omarj\\source\\repos\\Sword Art Project\\Sword Art Project\\Byte_Enc_Dec\\decrypted_gray_byte.bmp", newImg);
+                        cout << "Decrypted Saved ..." << endl;
+                        imshow("Decrypted Image", newImg);
+                        waitKey(0);
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+            else {
+                string name = "omar_jabari";
+                int id = 211144;
+                string data = name + to_string(id);
+                cout << "Hiding image .. loading ......." << endl;
+                cv::Mat image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\PeppersRGB.jpg", IMREAD_COLOR);
+                if (image.empty()) {
+                    cout << "Could not open or find the image" << endl;
+                    return -1;
+                }
+                hideDataInImage(image, data);
+                cv::imwrite("C:\\Users\\omarj\\source\\repos\\Sword Art Project\\Sword Art Project\\Byte_Enc_Dec\\hidden_data_image.bmp", image);
+                cout << "Data hidden and image saved ..." << endl;
+
+                cout << "Retrieve hidden data  :  1 " << endl;
+                int choice; cin >> choice;
+                if (choice == 1) {
+                    cv::Mat retrievedImage = imread("C:\\Users\\omarj\\source\\repos\\Sword Art Project\\Sword Art Project\\Byte_Enc_Dec\\hidden_data_image.bmp", IMREAD_COLOR);
+                    if (retrievedImage.empty()) {
+                        cout << "No File " << endl;
+                        return -1;
+                    }
+                    imshow("Hiding image ", image);
+                    waitKey(0);
+                    string retrievedData = retrieveDataFromImage(retrievedImage, data.size());
+                    cout << "Retrieved data: " << retrievedData << endl;
+                }
+            }
     }
     return 0;
 }
