@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include<algorithm>
 #include<map>
@@ -8,6 +9,7 @@
 #include <cmath>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <fstream>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -16,15 +18,22 @@
 #include "base64.h"
 #include "modes.h"
 #include "osrng.h"
+#include "rijndael.h"
+#include "ccm.h"
+#include "hex.h"
+#include "cryptlib.h"
+#include <direct.h>
+
 #define ll long long
 #define ma 1e9
 #define mi -1e9
 using namespace cv;
 using namespace std;
-using namespace CryptoPP;
+using namespace CryptoPP;   
 // key and iv ..
 SecByteBlock key(AES::DEFAULT_KEYLENGTH);
 SecByteBlock iv(AES::BLOCKSIZE);
+// uchar and byte and tests
 double encryption_quality_TEST(const Mat& plainImage, const Mat& encryptedImage) {
     int totalBytes = 256;
     double sumDiff = 0.0;
@@ -322,27 +331,42 @@ double InformationEnrtopy_TEST(const Mat& encryptedImage)
 }
 Mat vector_into_mat(const vector<unsigned char>& data, const Size& size, int type) {
     if (data.size() != size.width * size.height * CV_MAT_CN(type)) {
-        cerr << "Data size does not match the expected image dimensions and type." << endl;
-        return Mat();  // Return an empty Mat to indicate an error.
+        cerr << "Data size does not match the expected image dimensions and type ... " << endl;
+        return Mat(); 
     }
     Mat image(size, type);
     memcpy(image.data, data.data(), data.size());
     return image;
 }
 vector<unsigned char> encrypt_data0(const vector<unsigned char>& data, size_t& encryptedSize, const SecByteBlock& keyUsed) {
-    CBC_Mode<AES>::Encryption encryptor;
-    encryptor.SetKeyWithIV(keyUsed, keyUsed.size(), iv);
+    try {
+        CBC_Mode<AES>::Encryption encryptor;
+        encryptor.SetKeyWithIV(keyUsed, keyUsed.size(), iv);
 
-    string plainText(data.begin(), data.end());
-    string cipherText;
-    StringSource(plainText, true,
-        new StreamTransformationFilter(encryptor,
-            new StringSink(cipherText)
-        )
-    );
+        string plainText(data.begin(), data.end());
+        string cipherText;
 
-    encryptedSize = cipherText.size();
-    return vector<unsigned char>(cipherText.begin(), cipherText.end());
+        StringSource(plainText, true,
+            new StreamTransformationFilter(encryptor,
+                new StringSink(cipherText)
+            )
+        );
+
+        encryptedSize = cipherText.size();
+        return vector<unsigned char>(cipherText.begin(), cipherText.end());
+    }
+    catch (const CryptoPP::Exception& e) {
+        std::cerr << "Encryption failed: " << e.what() << std::endl;
+        return vector<unsigned char>();
+    }
+    catch (const std::exception& e) {
+        std::cerr << " exception: " << e.what() << std::endl;
+        return vector<unsigned char>();
+    }
+    catch (...) {
+        std::cerr << "Unknown exception occurred during encryption...." << std::endl;
+        return vector<unsigned char>();
+    }
 }
 void toggleBit(SecByteBlock& block, size_t bitIndex) {
     size_t byteIndex = bitIndex / 8;
@@ -566,59 +590,98 @@ cv::Mat VectorIntoMatrix(const vector<int>& data, const long long& rows, const l
     }
     return img;
 }
+
+// byte encrpytion and decryption ...
 vector<byte> encrypt_data(const vector<byte>& data) {
-    CBC_Mode<AES>::Encryption encryptor;
-    encryptor.SetKeyWithIV(key, key.size(), iv);
+    try {
+        CBC_Mode<AES>::Encryption encryptor;
+        encryptor.SetKeyWithIV(key, key.size(), iv);
 
-    vector<byte> cipherText;
-    VectorSource(data, true,
-        new StreamTransformationFilter(encryptor,
-            new VectorSink(cipherText)
-        )
-    );
+        vector<byte> cipherText;
+        VectorSource(data, true,
+            new StreamTransformationFilter(encryptor,
+                new VectorSink(cipherText)
+            )
+        );
+        return cipherText;
+    }
+    catch (const CryptoPP::Exception& e) {
+       cerr << "Encryption failed: " << e.what() << std::endl;
+        return vector<byte>();
+    }
+    catch (const std::exception& e) {
+        cerr << "exception: " << e.what() << std::endl;
+        return vector<byte>();
+    }
+    catch (...) {
+        cerr << "Unknown exception occurred during encryption." << std::endl;
+        return vector<byte>();
+    }
 
-    //encryptedSize = cipherText.size();
-    //return vector<unsigned char>(cipherText.begin(), cipherText.end());
-    return cipherText;
 }
 vector<byte> decrypt_data(const vector<byte>& encryptedData) {
-    CBC_Mode<AES>::Decryption decryptor;
-    decryptor.SetKeyWithIV(key, key.size(), iv);
-    vector<byte> decryptedData;
-    VectorSource(encryptedData, true,
-        new StreamTransformationFilter(decryptor,
-            new VectorSink(decryptedData)
-        )
-    );
-    return decryptedData;
+    try {
+        CBC_Mode<AES>::Decryption decryptor;
+        decryptor.SetKeyWithIV(key, key.size(), iv);
+
+        vector<byte> decryptedData;
+        VectorSource(encryptedData, true,
+            new StreamTransformationFilter(decryptor,
+                new VectorSink(decryptedData)
+            )
+        );
+        return decryptedData;
+    }
+    catch (const CryptoPP::Exception& e) {
+        cerr << "Decryption failed: " << e.what() << std::endl;
+        return vector<byte>();
+    }
+    catch (const std::exception& e) {
+       cerr << " exception: " << e.what() << std::endl;
+        return vector<byte>();
+    }
+    catch (...) {
+        cerr << "Unknown exception occurred during decryption." << std::endl;
+        return vector<byte>();
+    }
 }
 vector<int> ByteIntoInteger(vector<byte>& data) {
     return vector<int>(data.begin(), data.end());
 }
 //
 void hideDataInImage(Mat& image, const string& data) {
-    // Convert data to binary
+    if (image.empty() || image.rows == 0 || image.cols == 0) {
+        throw std::invalid_argument("Invalid or empty image provided.");
+    }
     string binaryData;
     for (char c : data) {
         binaryData += bitset<8>(c).to_string();
     }
+    if (binaryData.size() > image.rows * image.cols * 3) {
+        throw std::length_error("Image is too small to hide the provided data.");
+    }
     int dataIndex = 0;
-    for (int row = 0; row < image.rows; ++row) {
-        for (int col = 0; col < image.cols; ++col) {
-            if (dataIndex < binaryData.size()) {
-                Vec3b pixel = image.at<Vec3b>(row, col);
-                for (int color = 0; color < 3; ++color) {
-                    if (dataIndex < binaryData.size()) {
-                        pixel[color] = (pixel[color] & 0xFE) | (binaryData[dataIndex] - '0');
-                        ++dataIndex;
+    try {
+        for (int row = 0; row < image.rows; ++row) {
+            for (int col = 0; col < image.cols; ++col) {
+                if (dataIndex < binaryData.size()) {
+                    Vec3b& pixel = image.at<Vec3b>(row, col);
+                    for (int color = 0; color < 3; ++color) {
+                        if (dataIndex < binaryData.size()) {
+                            pixel[color] = (pixel[color] & 0xFE) | (binaryData[dataIndex] - '0');
+                            ++dataIndex;
+                        }
                     }
                 }
-                image.at<Vec3b>(row, col) = pixel;
-            }
-            else {
-                return;
+                else {
+                    return; 
+                }
             }
         }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Failed to hide data in image: " << e.what() << std::endl;
+        throw; 
     }
 }
 string retrieveDataFromImage(const Mat& image, int dataLength) {
@@ -647,69 +710,261 @@ string retrieveDataFromImage(const Mat& image, int dataLength) {
     }
     return data;
 }
-int main() {
-    AutoSeededRandomPool prng;
-    prng.GenerateBlock(key, key.size());
-    prng.GenerateBlock(iv, iv.size());
-    cout << "Choose a data method  ? " << endl; 
-    cout << "1- Unsigned Charecter Data " << endl;
-    cout << "2- Byte Data" << endl; // better for encryption / decryption 
-    int data_method; cin >> data_method; 
-    if (data_method == 1) {
-        int imageTypeChoice;  // Declaration of the imageTypeChoice variable
-        cout << "Select image type:" << endl;
-        cout << "1. Color image" << endl;
-        cout << "2. Grayscale image" << endl;
-        cin >> imageTypeChoice;
-        Mat image;
-        if (imageTypeChoice == 1) {
-            image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", IMREAD_COLOR);
+
+// test for cipher mode : 
+    void EncryptImage(const Mat& image, const string& outputBinaryPath, const byte key[], const byte iv[]) {
+        try {
+            if(image.empty()) {
+                throw runtime_error("Image matrix is empty.");
+            }
+            vector<int> imageData = MatrixIntoVector(image);
+
+            vector<byte> byteData = IntegerIntoByte(imageData);
+
+            CTR_Mode<AES>::Encryption encryption;
+            encryption.SetKeyWithIV(key, AES::DEFAULT_KEYLENGTH, iv);
+            vector<byte> cipherText(byteData.size());
+            encryption.ProcessData(cipherText.data(), byteData.data(), byteData.size());
+
+            
+            ofstream outFile(outputBinaryPath, ios::binary);
+            if (!outFile.is_open()) {
+                throw runtime_error("Could not open or write to file at " + outputBinaryPath);
+            }
+            outFile.write(reinterpret_cast<const char*>(cipherText.data()), cipherText.size());
+            outFile.close();
         }
-        else if (imageTypeChoice == 2) {
-            image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\gray.png", IMREAD_GRAYSCALE);
-            cout << "Image dimensions: " << image.cols << "x" << image.rows << ", Channels: " << image.channels() << endl;
-            if (image.channels() == 1) {
-                cvtColor(image, image, COLOR_GRAY2BGR);
-            }
-            if (image.cols == 0 && image.rows == 0) {
-                cout << "Error : Image size is not fixed ! " << endl;
-            }
+        catch (const cv::Exception& e) {
+            cerr << "OpenCV error: " << e.what() << endl;
+        }
+        catch (const runtime_error& e) {
+            cerr << "Runtime error: " << e.what() << endl;
+        }
+        catch (const exception& e) {
+            cerr << "Exception: " << e.what() << endl;
+        }
+    }
+void DecryptImage(const string& inputBinaryPath, const string& outputImagePath, const byte key[], const byte iv[], int rows, int cols) {
+    try {
+        ifstream inFile(inputBinaryPath, ios::binary);
+        if (!inFile.is_open()) {
+            throw runtime_error("Could not open or read from file at " + inputBinaryPath);
+        }
+        vector<byte> cipherText((istreambuf_iterator<char>(inFile)), istreambuf_iterator<char>());
+        inFile.close();
+
+        CTR_Mode<AES>::Decryption decryption;
+        decryption.SetKeyWithIV(key, AES::DEFAULT_KEYLENGTH, iv);
+
+        vector<byte> recoveredText(cipherText.size());
+        decryption.ProcessData(recoveredText.data(), cipherText.data(), cipherText.size());
+
+        vector<int> imageData = ByteIntoInteger(recoveredText);
+
+        Mat decryptedImage = VectorIntoMatrix(imageData, rows, cols);
+        if (decryptedImage.empty()) {
+            throw runtime_error("Error reconstructing the image from decrypted data.");
+        }
+
+        if (!imwrite(outputImagePath, decryptedImage)) {
+            throw runtime_error("Could not write the decrypted image to " + outputImagePath);
+        }
+    }
+    catch (const cv::Exception& e) {
+        cerr << "OpenCV error: " << e.what() << endl;
+    }
+    catch (const runtime_error& e) {
+        cerr << "Runtime error: " << e.what() << endl;
+    }
+    catch (const exception& e) {
+        cerr << "Exception: " << e.what() << endl;
+    }
+}
+// ------------------------------ test steam cipher
+// ------------------------------- 
+void decrypted_CTR_(const byte* input, byte* output, size_t length, const byte* key, const byte* iv) {
+    CTR_Mode<AES>::Encryption encryption;
+    encryption.SetKeyWithIV(key, AES::DEFAULT_KEYLENGTH, iv);
+    encryption.ProcessData(output, input, length);
+}
+void processImage(const string& imagePath, const string& outputDir) {
+    ll MAX = 1e7 + 43;
+    Mat image = imread(imagePath, IMREAD_COLOR);
+    if (!image.data) {
+        cout << "No image data \n";
+        return;
+    }
+
+    AutoSeededRandomPool prng;
+    byte key[AES::DEFAULT_KEYLENGTH], iv[AES::BLOCKSIZE];
+    prng.GenerateBlock(key, sizeof(key));
+    prng.GenerateBlock(iv, sizeof(iv));
+
+    vector<byte> simpleBuffer(image.total() * image.elemSize());
+    decrypted_CTR_(reinterpret_cast<byte*>(image.data), simpleBuffer.data(), simpleBuffer.size(), key, iv);
+
+    Mat simpleEncryptedImage(image.rows, image.cols, image.type(), simpleBuffer.data());
+    string simpleEncryptedImagePath = outputDir + "\\Encrypted_AES_CTR.jpg";
+    if (!imwrite(simpleEncryptedImagePath, simpleEncryptedImage)) {
+        cout << "Failed to write the simple encrypted image.\n";
+        return;
+    }
+
+    decrypted_CTR_(simpleBuffer.data(), reinterpret_cast<byte*>(image.data), simpleBuffer.size(), key, iv);
+    string simpleDecryptedPath = outputDir + "\\Decrypted_AES_CTR.jpg";
+    if (!imwrite(simpleDecryptedPath, image)) {
+        cout << "Failed to write the simple decrypted image.\n";
+        return;
+    }
+
+    // Permutation and xor to change
+    double u = 3.94;
+    vector<pair<double, int>> x;
+    x.push_back({ 0.4, 0 });
+    double temp;
+    for (int i = 1; i <= 511; ++i) {
+        temp = u * x[i - 1].first * (1 - x[i - 1].first);
+        x.push_back({ temp, i });
+    }
+    sort(x.begin(), x.end());
+
+    int i = 0;
+    for (int r = 0; r < image.rows; ++r) {
+        for (int c = 0; c < image.cols; ++c) {
+            if (i > 511) i = 0;
+            int temps = x[i].second % image.cols; 
+            Vec3b pixel = image.at<Vec3b>(r, temps);
+            image.at<Vec3b>(r, temps) = image.at<Vec3b>(r, c);
+            image.at<Vec3b>(r, c) = pixel;
+
+            int l = static_cast<int>(x[i].first * MAX) % 255;
+            image.at<Vec3b>(r, c)[0] ^= l;
+            image.at<Vec3b>(r, c)[1] ^= l;
+            image.at<Vec3b>(r, c)[2] ^= l;
+            i++;
+        }
+    }
+
+    vector<byte> complexBuffer(image.total() * image.elemSize());
+    decrypted_CTR_(reinterpret_cast<byte*>(image.data), complexBuffer.data(), complexBuffer.size(), key, iv);
+
+    Mat complexEncryptedImage(image.rows, image.cols, image.type(), complexBuffer.data());
+    string complexEncryptedImagePath = outputDir + "\\Encrypted_permutated_AES_CTR.jpg";
+    if (!imwrite(complexEncryptedImagePath, complexEncryptedImage)) {
+        cout << "Failed to write the complex encrypted image.\n";
+        return;
+    }
+
+    decrypted_CTR_(complexBuffer.data(), reinterpret_cast<byte*>(image.data), complexBuffer.size(), key, iv);
+
+    // Undo XOR and Permutation
+    i = 511;
+    for (int r = image.rows - 1; r >= 0; --r) {
+        for (int c = image.cols - 1; c >= 0; --c) {
+            if (i < 0) i = 511;
+            int temps = x[i].second % image.cols; 
+
+            Vec3b pixel = image.at<Vec3b>(r, temps);
+            image.at<Vec3b>(r, temps) = image.at<Vec3b>(r, c);
+            image.at<Vec3b>(r, c) = pixel;
+
+            int l = static_cast<int>(x[i].first * MAX) % 255;
+            image.at<Vec3b>(r, c)[0] ^= l;
+            image.at<Vec3b>(r, c)[1] ^= l;
+            image.at<Vec3b>(r, c)[2] ^= l;
+            i--;
+        }
+    }
+
+    string complexDecryptedPath = outputDir + "\\Decrypted_Permutated_AES_CTR.jpg";
+    if (!imwrite(complexDecryptedPath, image)) {
+        cout << "Failed to write the complex decrypted image.\n";
+        return;
+    }
+}
+//directories : 
+void createDirectoryIfMissing(const string& path) {
+    if (_mkdir(path.c_str()) != 0) {
+        if (errno == EEXIST) {
+            cout << "Directory already exists: " << path << endl;
         }
         else {
-            cout << "Invalid image type ..." << endl;
-            return -1;
-        }
-        if (image.empty()) {
-            cout << "Could not find the image" << endl;
-            return -1;
-        }
-        int choice;
-        cout << "Enter choice between 1 and 2 for tests: " << endl;
-        cout << "1- Key Sensitivity Attack" << endl;
-        cout << "2- Plain TextSenestivity Attack" << endl;
-        cin >> choice;
-        switch (choice) {
-        case 1:
-            performKeySensitivityTest(image);
-            break;
-        case 2:
-            performPlaintextSensitivityTest(image);
-            break;
-        default:
-            cout << "Invalid choice. Please select 1 or 2." << endl;
+            perror("Error creating directory");
+            cout << "Failed to create directory: " << path << endl;
         }
     }
     else {
-        // new functions for this method of data ... i will use the byte data only for encrpytion and decryption and maybe for some tests ...
-        cout << "Select image type:" << endl;
-        cout << "1. Color image" << endl;
-        cout << "2. Grayscale image" << endl;
-        cout << "3. Hiding image" << endl;
+        cout << "Created directory: " << path << endl;
+    }
+}
+int main() {
+    cout << "Choose ur mod ! " << endl;
+    cout << "1-CBC-MODE" << endl;
+    cout << "2-CTR-MODE" << endl;
+    int mode; cin >> mode;
+    if (mode == 1) {
+        AutoSeededRandomPool prng;
+        prng.GenerateBlock(key, key.size());
+        prng.GenerateBlock(iv, iv.size());
+        cout << "Choose a data method  ? " << endl;
+        cout << "1- Unsigned Charecter Data " << endl;
+        cout << "2- Byte Data" << endl; // better for encryption / decryption 
+        int data_method; cin >> data_method;
+        if (data_method == 1) {
+            int imageTypeChoice;  // Declaration of the imageTypeChoice variable
+            cout << "Select image type:" << endl;
+            cout << "1. Color image" << endl;
+            cout << "2. Grayscale image" << endl;
+            cin >> imageTypeChoice;
+            Mat image;
+            if (imageTypeChoice == 1) {
+                image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", IMREAD_COLOR);
+            }
+            else if (imageTypeChoice == 2) {
+                image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\gray.png", IMREAD_GRAYSCALE);
+                cout << "Image dimensions: " << image.cols << "x" << image.rows << ", Channels: " << image.channels() << endl;
+                if (image.channels() == 1) {
+                    cvtColor(image, image, COLOR_GRAY2BGR);
+                }
+                if (image.cols == 0 && image.rows == 0) {
+                    cout << "Error : Image size is not fixed ! " << endl;
+                }
+            }
+            else {
+                cout << "Invalid image type ..." << endl;
+                return -1;
+            }
+            if (image.empty()) {
+                cout << "Could not find the image" << endl;
+                return -1;
+            }
+            int choice;
+            cout << "Enter choice between 1 and 2 for tests: " << endl;
+            cout << "1- Key Sensitivity Attack" << endl;
+            cout << "2- Plain TextSenestivity Attack" << endl;
+            cin >> choice;
+            switch (choice) {
+            case 1:
+                performKeySensitivityTest(image);
+                break;
+            case 2:
+                performPlaintextSensitivityTest(image);
+                break;
+            default:
+                cout << "Invalid choice. Please select 1 or 2." << endl;
+            }
+        }
+        else {
+            // new functions for this method of data ... i will use the byte data only for encrpytion and decryption and maybe for some tests ...
+            cout << "Select image type:" << endl;
+            cout << "1. Color image" << endl;
+            cout << "2. Grayscale image" << endl;
+            cout << "3. Hiding image" << endl;
             int color_choice; cin >> color_choice;
             if (color_choice == 1) {
                 cout << "Encryption : 1 " << endl;
                 cout << "Decryption : 2 " << endl;
-           while (true) {
+                while (true) {
                     int lost; cin >> lost;
                     cv::Mat image = imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", IMREAD_COLOR);
                     vector<int> imageVector = MatrixIntoVector(image);
@@ -796,6 +1051,221 @@ int main() {
                     cout << "Retrieved data: " << retrievedData << endl;
                 }
             }
+        }
+
     }
-    return 0;
+    else {
+
+        //cout << "Encryption And Decryption Test Saved in project-photo\\decrypted_test" << endl; 
+        //string imagePath = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg";
+        //string outputDir = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\decrypt_test";
+        //processImage(imagePath, outputDir);
+        string path1 = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\decrypt_test\\Encrypted_AES_CTR.jpg";
+        string path2 = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\decrypt_test\\Encrypted_permutated_AES_CTR.jpg";
+        string outputTest = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\decrypt_test";
+
+        cout << "Select an option:" << endl;
+        cout << "1. Process and encrypt/decrypt an image" << endl;
+        cout << "2. Perform NPCR test between two encrypted images" << endl;
+        cout << "3. Perform UACI test between two encrypted images" << endl;
+        cout << "4. Perform HD test between two encrypted images" << endl;
+        cout << "5. Perform Chi-Square test between two encrypted images" << endl;
+        cout << "6. Calculate Information Entropy of an encrypted image" << endl;
+        cout << "7. Hide data in an image and retrieve it" << endl;
+        cout << "8. Decrypt Specific Encrypted Image ! " << endl;
+        cout << " 9. Quit " << endl;
+        
+        bool yugi = true;
+        while (yugi)
+        {
+            int choice;
+            cin >> choice;
+
+            string imagePath = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg";
+            string outputDir = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\decrypt_test";
+
+            if (choice == 1) {
+                cout << "Encryption And Decryption Test Saved in project-photo\\decrypted_test" << endl;
+                processImage(imagePath, outputDir);
+            }
+            else if (choice == 2) {
+                Mat img1 = imread(path1, IMREAD_COLOR);
+                Mat img2 = imread(path2, IMREAD_COLOR);
+                if (!img1.data || !img2.data) {
+                    cout << "Failed to load one or both images." << endl;
+                }
+                else {
+                    double result = NPCR_test(img1, img2);
+                    cout << "NPCR Result: " << result << "%" << endl;
+                }
+            }
+            else if (choice == 3) {
+                Mat img1 = imread(path1, IMREAD_COLOR);
+                Mat img2 = imread(path2, IMREAD_COLOR);
+                if (!img1.data || !img2.data) {
+                    cout << "Failed to load one or both images." << endl;
+                }
+                else {
+                    double result = UACI_TEST(img1, img2);
+                    cout << "UACI Result: " << result << "%" << endl;
+                }
+            }
+
+            else if (choice == 4) {
+                Mat img1 = imread(path1, IMREAD_COLOR);
+                Mat img2 = imread(path2, IMREAD_COLOR);
+                if (!img1.data || !img2.data) {
+                    cout << "Failed to load one or both images." << endl;
+                }
+                else {
+                    double result = HD_TEST(img1, img2);
+                    cout << "HD Result: " << result << "%" << endl;
+                }
+
+
+            }
+            else if (choice == 5) {
+                Mat img1 = imread(path1, IMREAD_COLOR);
+                Mat img2 = imread(path2, IMREAD_COLOR);
+                if (!img1.data || !img2.data) {
+                    cout << "Failed to load one or both images." << endl;
+                }
+                else {
+                    double result = Chi_Square_TEST(img1, img2);
+                    cout << "Chi-Square Result: " << result << endl;
+                }
+            }
+            else if (choice == 6) {
+                Mat encryptedImage = imread(path1, IMREAD_COLOR);
+                if (!encryptedImage.data) {
+                    cout << "Failed to load the encrypted image." << endl;
+                }
+                else {
+                    double entropy = InformationEnrtopy_TEST(encryptedImage);
+                    cout << "Information Entropy: " << entropy << endl;
+                }
+            }
+            else if (choice == 7) {
+                Mat image = imread(imagePath, IMREAD_COLOR);
+                if (!image.data) {
+                    cout << "Failed Load Data ...." << endl;
+                }
+                else {
+                    string secretData = "omarjabari_211144";
+                    hideDataInImage(image, secretData);
+                    cout << "Data hidden successfully." << endl;
+                    namedWindow("Image with Hidden Data", WINDOW_AUTOSIZE);
+                    imshow("Image with Hidden Data", image);
+                    waitKey(0);
+
+                    string retrievedData = retrieveDataFromImage(image, secretData.length());
+                    cout << "Retrieved data: " << retrievedData << endl;
+                }
+                //
+            }
+            else if (choice == 8) {
+                const byte key[16] = "omarjabari12345";  // 16 bytes key 
+                const byte iv[16] = "123456789qwerty";  // 16 bytes IV 
+
+                string inputImagePath = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg";
+                string encryptedOutputDir = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\specific_test\\encrypted_test_part";
+                string decryptedOutputDir = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\specific_test\\decrypted_test_part";
+
+                createDirectoryIfMissing(encryptedOutputDir);
+                createDirectoryIfMissing(decryptedOutputDir);
+
+               string encryptedOutputPath = encryptedOutputDir + "\\encrypted.jpg";
+                string decryptedOutputPath = decryptedOutputDir + "\\ilikealgorithm.jpg";
+
+                Mat image = imread(inputImagePath, IMREAD_COLOR);
+                if (!image.data) {
+                    cout << "No image data whyyy \n";
+                    return 0;
+                }
+                vector<byte> buffer(image.total() * image.elemSize());
+                decrypted_CTR_(reinterpret_cast<byte*>(image.data), buffer.data(), buffer.size(), key, iv);
+                Mat encryptedImage(image.rows, image.cols, image.type(), buffer.data());
+                if (!imwrite(encryptedOutputPath, encryptedImage)) {
+                    cout << "Failed to write the encrypted image.\n";
+                    return 0;
+                }
+                vector<byte> decryptedData(buffer.size());
+                decrypted_CTR_(buffer.data(), decryptedData.data(), buffer.size(), key, iv);
+                Mat decryptedImage(image.rows, image.cols, image.type(), decryptedData.data());
+                if (!imwrite(decryptedOutputPath, decryptedImage)) {
+                    cout << "Failed to write the decrypted image.\n";
+                    return 0;
+                }
+                cout << "Encryption and decryption completed successfully." << endl;
+                cout << "Encrypted image saved to: " << encryptedOutputPath << endl;
+                cout << "Decrypted image saved to: " << decryptedOutputPath << endl;
+            }
+            else if (choice == 9) {
+                yugi = false;
+                break;
+            }
+            else if (choice == 10) {
+
+                cv::Mat image = cv::imread("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\LenaRGB.jpg", cv::IMREAD_COLOR);
+                if (!image.data) {
+                    std::cout << "No image data \n";
+                    return -1;
+                }
+                //cv::namedWindow("Display Image", cv::WINDOW_AUTOSIZE);
+                //cv::imshow("Display Image", image);
+                //cv::waitKey(0);
+
+                bool result = cv::imwrite("C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\specific_test\\decrypted_test_part\\decr_test.jpg", image);
+                if (!result) {
+                    std::cout << "Failed to save the image\n";
+                    return -1;
+                }
+
+                std::cout << "Image saved successfully\n";
+
+            }
+            else if (choice == 11) {
+
+
+                const byte key[16] = "omarjabari12345";  
+                const byte iv[16] = "123456789qwerty";  
+                string inputImagePath = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\BaboonRGB.jpg";
+                string decryptedOutputDir = "C:\\Users\\omarj\\OneDrive\\Documents\\project-photos\\specific_test\\decrypted_test_baboon";
+
+                createDirectoryIfMissing(decryptedOutputDir);
+                string decryptedOutputPath = decryptedOutputDir + "\\decrypted_baboon.jpg";
+
+                Mat image = imread(inputImagePath, IMREAD_COLOR);
+                if (!image.data) {
+                    cout << "No image data \n";
+                    return 1;
+                }
+
+                vector<byte> buffer(image.total() * image.elemSize());
+                vector<byte> decryptedData(buffer.size());
+
+               
+                decrypted_CTR_(reinterpret_cast<byte*>(image.data), decryptedData.data(), decryptedData.size(), key, iv);
+
+                Mat decryptedImage(image.rows, image.cols, image.type(), decryptedData.data());
+                if (!imwrite(decryptedOutputPath, decryptedImage)) {
+                    cout << "Failed to write the decrypted image.\n";
+                    return 1;
+                }
+
+                cout << "Decryption completed successfully.\n";
+                cout << "Decrypted image saved to: " << decryptedOutputPath << endl;
+
+
+            }
+            else {
+                cout << "INVALID OPTION " << endl;
+            }
+
+
+        }
+        
+
+        return 0;
+    }
 }
